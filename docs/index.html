@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VPN Guardian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column, a live "what sites see" readout as the hero, then a watch log, install, roadmap, follow. */
+:root{
+  --bg:#EDF0F3; --surface:#F8FAFB; --ink:#14202B; --muted:#56636F; --line:#CDD5DC;
+  --accent:#C2620A; --ok:#1E7A4F; --bad:#B42318; --code-bg:#14202B; --code-fg:#E6ECF1;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E151C; --surface:#16202A; --ink:#E3E9EF; --muted:#93A1AE; --line:#2A3743;
+  --accent:#F0A040; --ok:#4CC38A; --bad:#F2716A; --code-bg:#0A1016; --code-fg:#E3E9EF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E151C; --surface:#16202A; --ink:#E3E9EF; --muted:#93A1AE; --line:#2A3743;
+  --accent:#F0A040; --ok:#4CC38A; --bad:#F2716A; --code-bg:#0A1016; --code-fg:#E3E9EF; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-inline:20px;padding-block:48px 64px;display:flex;flex-direction:column;gap:72px}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+.brand{font:600 13px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 22%,transparent)}
+h1{font:800 clamp(2.4rem,7vw,4.2rem)/1.02 var(--display);letter-spacing:-.02em;margin:18px 0 16px;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+h2{font:700 1.7rem/1.15 var(--display);margin:0 0 14px;text-wrap:balance}
+p{margin:0;max-width:62ch}
+.lede{font-size:1.15rem;color:var(--muted)}
+
+/* Live readout */
+.readout{margin-top:28px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.readout header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex-wrap:wrap}
+.tag{font:500 11px var(--mono);padding:3px 8px;border-radius:99px;border:1px solid var(--line)}
+.rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.row{padding:16px;border-right:1px solid var(--line);min-width:0}
+.row:last-child{border-right:0}
+.row dt{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.row dd{margin:6px 0 0;font:500 1.1rem var(--mono);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.readout footer{padding:12px 16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+button{font:500 14px var(--body);background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+button:hover{opacity:.88}
+
+/* Watch log */
+.log{background:var(--code-bg);color:var(--code-fg);border-radius:12px;padding:18px 18px;font:14px/1.75 var(--mono);overflow-x:auto;margin-top:20px}
+.log div{white-space:pre}
+.log .t{opacity:.55}
+.log .warn{color:#F2716A}.log .good{color:#4CC38A}.log .info{color:#F0A040}
+
+.checks{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:14px}
+.checks li{display:grid;grid-template-columns:120px 1fr;gap:16px;padding-top:14px;border-top:1px solid var(--line)}
+.checks b{font:500 13px var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:520px){.checks li{grid-template-columns:1fr;gap:4px}}
+
+/* Install */
+.cmd{display:flex;align-items:stretch;background:var(--code-bg);color:var(--code-fg);border-radius:10px;margin-top:12px;overflow:hidden}
+.cmd code{flex:1;min-width:0;padding:14px 16px;font:14px var(--mono);overflow-x:auto;white-space:pre}
+.cmd button{border-radius:0;background:transparent;color:var(--code-fg);border-left:1px solid #2A3743;font-family:var(--mono);font-size:12px}
+
+/* Roadmap */
+.road{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:0}
+.road li{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.road .v{font:500 14px var(--mono);color:var(--muted)}
+.road .done .v{color:var(--ok)}
+.road .done span:last-child::after{content:"  shipped";font:500 11px var(--mono);color:var(--ok);letter-spacing:.06em;text-transform:uppercase}
+
+.follow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px}
+.follow .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.btn{display:inline-block;text-decoration:none;font:600 15px var(--body);padding:12px 18px;border-radius:9px;background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.foot{font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.dot{animation:pulse 2.4s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--ok) 8%,transparent)}}}
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <section>
+    <div class="brand"><span class="dot" aria-hidden="true"></span>VPN Guardian · free &amp; open source</div>
+    <h1>Your VPN says it's on. <em>Is it?</em></h1>
+    <p class="lede">A free security agent that runs on your Mac, watches your connection every 30 seconds, and alerts your laptop and phone the moment your VPN drops or leaks your real location.</p>
+
+    <div class="readout" aria-live="polite">
+      <header><span>What websites see right now</span><span class="tag" id="mode">Checking…</span></header>
+      <dl class="rows" style="margin:0">
+        <div class="row"><dt>IP address</dt><dd id="ip">—</dd></div>
+        <div class="row"><dt>Location</dt><dd id="loc">—</dd></div>
+        <div class="row"><dt>Network owner</dt><dd id="org">—</dd></div>
+      </dl>
+      <footer><span id="hint">If this shows your home city, your VPN is off or leaking.</span><button id="recheck" type="button">Check again</button></footer>
+    </div>
+  </section>
+
+  <section>
+    <h2>What it watches</h2>
+    <p>Most people trust their VPN blindly. VPN Guardian checks that it's actually working and tells you in plain language when it isn't.</p>
+    <ul class="checks">
+      <li><b>Drops</b><span>Your VPN disconnects on café Wi-Fi and your real IP is exposed. You get an alert within seconds.</span></li>
+      <li><b>IP leaks</b><span>The VPN app says "connected" but websites still see your real address.</span></li>
+      <li><b>Route leaks</b><span>The tunnel is up, but your traffic is quietly leaving outside it.</span></li>
+      <li><b>Location</b><span>Shows the city and country sites think you're in, and tells you when it changes.</span></li>
+      <li><b>Networks</b><span>New Wi-Fi, going offline, and DNS changes, all logged.</span></li>
+    </ul>
+    <div class="log" role="img" aria-label="Example alert log">
+      <div><span class="t">06:12:04</span>  VPN Guardian v1.0 starting (every 30s, phone alerts: on)</div>
+      <div><span class="t">06:12:05</span>  <span class="good">VPN connected. Sites now see you in Amsterdam, Netherlands.</span></div>
+      <div><span class="t">06:31:40</span>  <span class="info">Network changed: Home-5G -&gt; Coffee-Guest</span></div>
+      <div><span class="t">06:32:10</span>  <span class="warn">VPN DROPPED on Coffee-Guest. Your real IP is exposed.</span></div>
+      <div><span class="t">06:32:40</span>  <span class="good">VPN connected. Sites now see you in Amsterdam, Netherlands.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Install in a minute</h2>
+    <p>macOS. Needs nothing but Terminal. Run it once with your VPN off so it learns your real IP, then turn the VPN on.</p>
+    <div class="cmd"><code id="c1"></code><button type="button" data-copy="c1">Copy</button></div>
+    <p style="margin-top:14px;color:var(--muted);font-size:15px">Phone alerts are free through the ntfy app. Setup steps are in the README on GitHub.</p>
+  </section>
+
+  <section>
+    <h2>Roadmap</h2>
+    <p>Built in public, one version at a time.</p>
+    <ol class="road">
+      <li class="done"><span class="v">v0</span><span>VPN drop, IP leak and route leak alerts</span></li>
+      <li class="done"><span class="v">v1</span><span>Location tracking and free phone alerts</span></li>
+      <li><span class="v">v2</span><span>DNS, IPv6 and WebRTC leak tests; risky Wi-Fi warnings</span></li>
+      <li><span class="v">v3</span><span>VPN app auditor that grades installed VPNs A to F</span></li>
+      <li><span class="v">v4</span><span>Your own WireGuard server with location rotation</span></li>
+      <li><span class="v">v5</span><span>Local AI that explains every alert in plain English</span></li>
+      <li><span class="v">v6</span><span>Home network watch and a dashboard</span></li>
+    </ol>
+  </section>
+
+  <section class="follow">
+    <h2>Follow the build</h2>
+    <p>I'm teaching myself cybersecurity and building tools like this in public. I write about the journey, what breaks, and what I learn on Substack.</p>
+    <div class="actions">
+      <a class="btn" id="substack" href="#">Subscribe on Substack</a>
+      <a class="btn ghost" id="github" href="#">Get it on GitHub</a>
+    </div>
+  </section>
+
+  <p class="foot">Made by Ghato. MIT licensed. VPN Guardian never sends your data anywhere except the alerts you set up.</p>
+</main>
+
+<script>
+/* Edit these two links */
+const SUBSTACK_URL = "https://gahtomahiko.substack.com";
+const GITHUB_URL   = "https://github.com/jeffreyesdavid/vpn-guardian";
+
+document.getElementById("substack").href = SUBSTACK_URL;
+document.getElementById("github").href = GITHUB_URL;
+document.getElementById("c1").textContent =
+  "git clone " + GITHUB_URL + ".git\ncd vpn-guardian && chmod +x vpn-guardian.sh\n./vpn-guardian.sh";
+
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => {
+  const el = document.getElementById(b.dataset.copy);
+  const done = () => { b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(el.textContent).then(done).catch(() => select(el));
+  } else select(el);
+}));
+function select(el){ const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+const $ = id => document.getElementById(id);
+async function check(){
+  $("mode").textContent = "Checking…";
+  try {
+    const r = await fetch("https://am.i.mullvad.net/json", {cache:"no-store"});
+    const j = await r.json();
+    $("ip").textContent = j.ip || "—";
+    $("loc").textContent = [j.city, j.country].filter(Boolean).join(", ") || "—";
+    $("org").textContent = j.organization || "—";
+    $("mode").textContent = "Live";
+    $("hint").textContent = "If this shows your home city, your VPN is off or leaking.";
+  } catch (e) {
+    try {
+      const r = await fetch("https://api.ipify.org?format=json", {cache:"no-store"});
+      const j = await r.json();
+      $("ip").textContent = j.ip; $("loc").textContent = "—"; $("org").textContent = "—";
+      $("mode").textContent = "Live";
+    } catch (e2) {
+      $("ip").textContent = "203.0.113.42";
+      $("loc").textContent = "Amsterdam, Netherlands";
+      $("org").textContent = "Example VPN host";
+      $("mode").textContent = "Example";
+      $("hint").textContent = "Example data. The live check runs on the public site.";
+    }
+  }
+}
+$("recheck").addEventListener("click", check);
+check();
+</script>
+</body>
+</html>

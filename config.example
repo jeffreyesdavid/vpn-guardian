@@ -1,0 +1,12 @@
+# VPN Guardian config
+# Copy to ~/.vpn-guardian/config and edit:
+#   mkdir -p ~/.vpn-guardian && cp config.example ~/.vpn-guardian/config
+
+# Seconds between checks
+INTERVAL=30
+
+# Phone alerts via ntfy.sh (free, no account).
+# 1. Install the ntfy app (iOS/Android).
+# 2. Make up a long random topic name (anyone who knows it can read your alerts).
+# 3. Subscribe to that topic in the app and paste it here.
+NTFY_TOPIC=""
