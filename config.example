@@ -10,3 +10,9 @@ INTERVAL=30
 # 2. Make up a long random topic name (anyone who knows it can read your alerts).
 # 3. Subscribe to that topic in the app and paste it here.
 NTFY_TOPIC=""
+
+# AI explanations (runs locally with Ollama, free, nothing leaves your Mac).
+# 1 = on, 0 = off. Install Ollama from https://ollama.com and pull a model:
+#   ollama pull hermes3
+AI_EXPLAIN=1
+OLLAMA_MODEL="hermes3"

@@ -1,18 +1,20 @@
 #!/bin/bash
 # ------------------------------------------------------------
-# VPN Guardian v1 (macOS)
+# VPN Guardian v1.1 (macOS)
 # A personal security agent that watches your connection,
 # catches VPN drops and leaks, and alerts your Mac and phone.
+# New in 1.1: a local AI (Ollama) explains each alert in plain English.
 #
-# Run:    chmod +x vpn-guardian.sh && ./vpn-guardian.sh
-# Stop:   Ctrl+C
-# Log:    ~/.vpn-guardian/log.txt
-# Config: ~/.vpn-guardian/config  (see README)
+# Run:     chmod +x vpn-guardian.sh && ./vpn-guardian.sh
+# Stop:    Ctrl+C
+# Log:     ~/.vpn-guardian/log.txt
+# Config:  ~/.vpn-guardian/config  (see README)
+# Test AI: ./vpn-guardian.sh --explain "VPN DROPPED on Coffee-Guest."
 #
 # Start once with your VPN OFF so it learns your real IP.
 # ------------------------------------------------------------
 
-VERSION="1.0"
+VERSION="1.1"
 DIR="$HOME/.vpn-guardian"
 LOG="$DIR/log.txt"
 REAL_IP_FILE="$DIR/real_ip"
@@ -23,21 +25,67 @@ mkdir -p "$DIR"
 INTERVAL=30          # seconds between checks
 NTFY_TOPIC=""        # set to a long random name to get phone alerts via ntfy.sh
 NTFY_SERVER="https://ntfy.sh"
+AI_EXPLAIN=1         # 1 = explain alerts with a local Ollama model, 0 = off
+OLLAMA_MODEL="hermes3"
 [ -f "$CONFIG" ] && . "$CONFIG"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $1" | tee -a "$LOG"; }
 
 # --- Alerts: Mac notification + optional phone push -------------
-notify() {
-  log "ALERT: $1"
+send_alert() {  # send_alert <title> <message>
   osascript -e 'on run argv' \
-            -e 'display notification (item 1 of argv) with title "VPN Guardian" sound name "Basso"' \
-            -e 'end run' "$1" >/dev/null 2>&1
+            -e 'display notification (item 2 of argv) with title (item 1 of argv) sound name "Basso"' \
+            -e 'end run' "$1" "$2" >/dev/null 2>&1
   if [ -n "$NTFY_TOPIC" ]; then
-    curl -s --max-time 5 -H "Title: VPN Guardian" -H "Tags: shield" \
-         -d "$1" "$NTFY_SERVER/$NTFY_TOPIC" >/dev/null 2>&1
+    curl -s --max-time 5 -H "Title: $1" -H "Tags: shield" \
+         -d "$2" "$NTFY_SERVER/$NTFY_TOPIC" >/dev/null 2>&1
   fi
 }
+
+# --- AI explainer: runs locally through Ollama, nothing leaves your Mac ---
+ai_ready() {
+  [ "$AI_EXPLAIN" = "1" ] && command -v ollama >/dev/null 2>&1 \
+    && curl -s --max-time 2 http://127.0.0.1:11434/ >/dev/null 2>&1
+}
+
+explain() {  # explain <alert text>  -> prints a short plain-English explanation
+  local prompt
+  prompt="You are VPN Guardian, a friendly home-network security assistant. \
+Explain this alert to a non-technical person in at most 2 short sentences: \
+what it means for their privacy, and the one thing they should do right now. \
+No preamble, no lists. Alert: $1"
+  ollama run --nowordwrap "$OLLAMA_MODEL" "$prompt" </dev/null 2>/dev/null | perl -pe 's/\e\[[0-9;?]*[A-Za-z]//g' | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+}
+
+explain_and_send() {  # runs in the background so monitoring never waits on the AI
+  local text
+  text=$(explain "$1")
+  [ -z "$text" ] && return
+  log "AI: $text"
+  send_alert "VPN Guardian · what this means" "$text"
+}
+
+notify() {
+  log "ALERT: $1"
+  send_alert "VPN Guardian" "$1"
+  ai_ready && ( explain_and_send "$1" & )
+}
+
+# --- Test mode: ./vpn-guardian.sh --explain "alert text" -----------
+if [ "$1" = "--explain" ]; then
+  if ! command -v ollama >/dev/null 2>&1; then
+    echo "Ollama isn't installed. Get it free at https://ollama.com"; exit 1
+  fi
+  if ! curl -s --max-time 2 http://127.0.0.1:11434/ >/dev/null 2>&1; then
+    echo "Ollama isn't running. Open the Ollama app, then try again."; exit 1
+  fi
+  alert="${2:-VPN DROPPED on Coffee-Guest. Your real IP is exposed.}"
+  echo "Alert:  $alert"
+  echo "Model:  $OLLAMA_MODEL (local)"
+  echo
+  explain "$alert"; echo
+  exit 0
+fi
 
 # --- What the world sees (free check from Mullvad, no account) --
 json_field() {  # json_field <json> <key>
@@ -98,7 +146,9 @@ trap 'log "Stopped."; exit 0' INT TERM
 first=1
 prev_vpn=""; prev_ip=""; prev_loc=""; prev_dns=""; prev_wifi=""; prev_leak=""
 
-log "VPN Guardian v$VERSION starting (every ${INTERVAL}s, phone alerts: ${NTFY_TOPIC:+on}${NTFY_TOPIC:-off})"
+if ai_ready; then ai_status="on ($OLLAMA_MODEL)"; else ai_status="off"; fi
+phone_status="off"; [ -n "$NTFY_TOPIC" ] && phone_status="on"
+log "VPN Guardian v$VERSION starting (every ${INTERVAL}s, phone alerts: $phone_status, AI explain: $ai_status)"
 
 while true; do
   vpn=$(vpn_interfaces | tr '\n' ' ' | sed 's/ $//')

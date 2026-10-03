@@ -4,7 +4,7 @@ A personal security agent that watches your internet connection, catches VPN dro
 
 > Most people trust their VPN blindly. VPN Guardian checks that it's actually working.
 
-## What it does (v1)
+## What it does (v1.1)
 
 - **VPN drop alerts:** notifies you the moment your VPN disconnects and your real IP is exposed
 - **IP leak detection:** catches when the VPN says "connected" but websites still see your real IP
@@ -12,6 +12,7 @@ A personal security agent that watches your internet connection, catches VPN dro
 - **Location tracking:** shows the city and country websites think you're in, and alerts when it changes
 - **Network awareness:** alerts on Wi-Fi changes and going offline, and logs DNS changes
 - **Phone alerts:** free push notifications through [ntfy.sh](https://ntfy.sh)
+- **AI explanations (new in v1.1):** a local AI model through [Ollama](https://ollama.com) explains each alert in plain English and tells you what to do. It runs on your Mac, so nothing is sent anywhere
 - **Full log** at `~/.vpn-guardian/log.txt`
 
 ## Website
@@ -28,6 +29,17 @@ chmod +x vpn-guardian.sh
 ```
 
 Run it once with your VPN **off** so it learns your real IP, then turn your VPN on.
+
+### Optional: AI explanations
+
+Install [Ollama](https://ollama.com), then:
+
+```bash
+ollama pull hermes3
+./vpn-guardian.sh --explain "VPN DROPPED on Coffee-Guest."
+```
+
+If Ollama is running, every alert gets a second notification explaining what it means. Turn it off with `AI_EXPLAIN=0` in the config.
 
 ### Optional: phone alerts
 
@@ -53,6 +65,7 @@ Every 30 seconds it checks:
 
 - [x] **v0:** VPN drop, IP leak, and route leak alerts
 - [x] **v1:** location tracking + free phone alerts (ntfy)
+- [x] **v1.1:** local AI explanations with Ollama (early piece of v5)
 - [ ] **v2:** DNS leak test, IPv6/WebRTC leak checks, risky Wi-Fi warnings
 - [ ] **v3:** VPN app auditor that grades installed VPNs A–F (owner, country, permissions, trackers)
 - [ ] **v4:** self-hosted WireGuard on a Raspberry Pi or free-tier cloud server, with server rotation
