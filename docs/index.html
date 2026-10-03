@@ -183,9 +183,12 @@ async function check(){
     $("hint").textContent = "If this shows your home city, your VPN is off or leaking.";
   } catch (e) {
     try {
-      const r = await fetch("https://api.ipify.org?format=json", {cache:"no-store"});
+      const r = await fetch("https://ipwho.is/", {cache:"no-store"});
       const j = await r.json();
-      $("ip").textContent = j.ip; $("loc").textContent = "—"; $("org").textContent = "—";
+      if (!j.ip) throw new Error("no ip");
+      $("ip").textContent = j.ip;
+      $("loc").textContent = [j.city, j.country].filter(Boolean).join(", ") || "—";
+      $("org").textContent = (j.connection && (j.connection.isp || j.connection.org)) || "—";
       $("mode").textContent = "Live";
     } catch (e2) {
       $("ip").textContent = "203.0.113.42";
