@@ -15,6 +15,21 @@ A personal security agent that watches your internet connection, catches VPN dro
 - **AI explanations (new in v1.1):** a local AI model through [Ollama](https://ollama.com) explains each alert in plain English and tells you what to do. It runs on your Mac, so nothing is sent anywhere
 - **Full log** at `~/.vpn-guardian/log.txt`
 
+## See it in action
+
+A coffee shop session where the VPN drops mid-session (from `~/.vpn-guardian/log.txt`; IPs and places swapped for examples):
+
+```text
+09:14:02  VPN Guardian v1.1 starting (every 30s, phone alerts: on, AI explain: on (hermes3))
+09:14:03  VPN: utun4 | Sites see: 185.65.134.20 (Amsterdam, Netherlands) via Mullvad VPN | Route: utun4 | Wi-Fi: Coffee-Guest
+09:41:33  ALERT: VPN DROPPED on Coffee-Guest. Your real IP (203.0.113.42, Los Angeles, United States) is exposed.
+09:41:38  AI: Your VPN turned off, so websites can see your real location on this public Wi-Fi.
+          Fix: reconnect your VPN before you keep browsing or log in to anything.
+09:42:04  ALERT: VPN connected. Sites now see you in Amsterdam, Netherlands (185.65.134.20).
+```
+
+Each `ALERT` also pops up as a Mac notification and, if set up, a push to your phone. The `AI` line is written by a model running on your own Mac.
+
 ## Website
 
 The landing page lives in `docs/`. Turn it on in **Settings → Pages → Deploy from branch → main → /docs**, and it goes live at `https://jeffreyesdavid.github.io/vpn-guardian/`.
@@ -51,6 +66,20 @@ cp config.example ~/.vpn-guardian/config
 Install the **ntfy** app, subscribe to a long random topic name, and put that name in `NTFY_TOPIC` in the config.
 
 ## How it works
+
+```mermaid
+flowchart LR
+    L["Every 30s"] --> V["Tunnel up?<br/>utun / wg / ipsec"]
+    L --> I["Public IP + location<br/>am.i.mullvad.net"]
+    L --> R["Route check<br/>route get"]
+    V & I & R --> C{"Changed vs<br/>last check?"}
+    C -->|VPN dropped| A["ALERT"]
+    C -->|real IP visible| A
+    C -->|traffic outside tunnel| A
+    A --> N["Mac notification<br/>+ ntfy phone push"]
+    A --> O["Ollama (local AI)<br/>plain-English fix"]
+    O --> N
+```
 
 Every 30 seconds it checks:
 
